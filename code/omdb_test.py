@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[46]:
-
-
 """importing url and JSON tools for OMDB retrieval, and pandas for data analysis"""
 from urllib.request import urlopen
 import json
@@ -24,17 +18,14 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short', ret
             search_string += "&t=" + title.replace(' ', '+')
     else:
         search_string += "&i=" + imdb_id
-        
+
     if content_type is not None:
         search_string += "&type=" + content_type
-        
+
     search_string += "&plot=" + plot + "&r=" + return_type
-    
+
     with urlopen(search_string) as url:
         return json.loads(url.read().decode())
-
-
-# In[49]:
 
 
 TEST_TITLES = ['The Office', 'Parks and Recreation', 'Game of Thrones']
@@ -43,6 +34,5 @@ RAW_DATA = []
 
 for T in TEST_TITLES:
     RAW_DATA.append(get_omdb_data(title=T, plot='full'))
-    
-DATA = df.DataFrame(RAW_DATA)
 
+DATA = df.DataFrame(RAW_DATA)
