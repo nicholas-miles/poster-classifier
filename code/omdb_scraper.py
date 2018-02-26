@@ -53,7 +53,7 @@ def imdb_titles(num_pages=1):
     """
     titles = []
 
-    for i in range(num_pages):
+    for i in range(1,num_pages+1):
         search_param = {'title_type': 'tv_series,mini_series', 'page': str(i)}
         html_result = simple_get(
             'http://www.imdb.com/search/title', payload=search_param)
@@ -107,7 +107,11 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
         payload['i'] = imdb_id
 
     resp = simple_get(url, 'json', payload)
-    return json.loads(resp)
+    json_resp = json.loads(resp)
+
+    json_resp['Genre'] = json_resp['Genre'].replace(' ','').split(',')
+
+    return json_resp
 
 
 omdb_data = []
@@ -116,7 +120,6 @@ for d in imdb_titles(3):
     try:
         result = get_omdb_data(title=d['title'])
         result['rank'] = d['rank']
-        result['genre'] = d['genre']
         omdb_data.append(result)
     except KeyError:
         print('OMDB retrieval failed for ' + d['title'])
