@@ -64,15 +64,20 @@ def imdb_titles(num_pages=1):
             d = {}
 
             try:
-                d['title'] = struct.find('a').text
+                d['title'] = struct.find(
+                    'a').text
+
                 d['rank'] = int(struct.find(
                     'span', {'class': 'lister-item-index unbold text-primary'}).text.replace('.', ''))
-                d['genre'] = struct.find('span', {'class': 'genre'}).text.replace(
-                    ' ', '').replace('\n', '')
+
+                d['genre'] = struct.find(
+                    'span', {'class': 'genre'}).text.replace(' ', '').replace('\n', '')
+
                 d['rating'] = struct.find(
                     'div', {'class': 'inline-block ratings-imdb-rating'})['data-value']
-                d['imdb_id'] = struct.find('span', {'class': 'userRatingValue'})[
-                    'data-tconst']
+
+                d['imdb_id'] = struct.find(
+                    'span', {'class': 'userRatingValue'})['data-tconst']
 
             except TypeError:
                 pass
