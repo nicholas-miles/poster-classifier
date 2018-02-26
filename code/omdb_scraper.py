@@ -46,15 +46,18 @@ def get_api_key(filepath):
         return api_file.readline().replace('\n', '').replace('\r', '')
 
 
-def imdb_titles(num_pages=1):
+def imdb_titles(num_pages=1, content_type=['tv_series','mini_series'], genre_detail=[]):
     """
     Scrapes imdb titles and IDs from top titles page
     returns list of dictionaries
     """
     titles = []
 
+    content_search = ','.join(content_type)
+    genre_search = ','.join(genre_detail)
+
     for i in range(1,num_pages+1):
-        search_param = {'title_type': 'tv_series,mini_series', 'page': str(i)}
+        search_param = {'title_type': content_search, 'page': str(i), 'genres': genre_search}
         html_result = simple_get(
             'http://www.imdb.com/search/title', payload=search_param)
 
@@ -116,7 +119,7 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
 
 omdb_data = []
 
-for d in imdb_titles(3):
+for d in imdb_titles(1):
     try:
         result = get_omdb_data(title=d['title'])
         result['rank'] = d['rank']
