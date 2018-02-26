@@ -64,6 +64,7 @@ def imdb_titles(num_pages=1):
 
             try:
                 d['title'] = struct.find('a').text
+                d['rank'] = int(struct.find('span', {'class': 'lister-item-index unbold text-primary'}).text.replace('.',''))
                 d['genre'] = struct.find('span', {'class': 'genre'}).text.replace(' ','').replace('\n', '')
                 d['rating'] = struct.find('div', {'class': 'inline-block ratings-imdb-rating'})['data-value']
                 d['imdb_id'] = struct.find('span', {'class': 'userRatingValue'})['data-tconst']
@@ -98,9 +99,19 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
     resp = simple_get(url, 'json', payload)
     return json.loads(resp)
 
+omdb_data = []
 
 for d in imdb_titles(3):
-    print(d['title'])
+    try:
+        result = get_omdb_data(title=d['title'])
+        result['rank'] = d['rank']
+        result['genre'] = d['genre']
+        omdb_data.append(result)
+    except KeyError:
+        print('OMDB retrieval failed for ' + d['title'])
+        pass
+
+print(next(item for item in omdb_data if item['rank'] == 1))
 
 #with open('omdb_test.json', 'w') as outfile:
 #    json.dump(get_omdb_data(title='Game of Thrones'), outfile)
