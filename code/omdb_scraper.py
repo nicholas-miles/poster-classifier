@@ -55,7 +55,8 @@ def imdb_titles(num_pages=1):
 
     for i in range(num_pages):
         search_param = {'title_type': 'tv_series,mini_series', 'page': str(i)}
-        html_result = simple_get('http://www.imdb.com/search/title', payload=search_param)
+        html_result = simple_get(
+            'http://www.imdb.com/search/title', payload=search_param)
 
         soup = BeautifulSoup(html_result, 'html.parser')
 
@@ -64,10 +65,14 @@ def imdb_titles(num_pages=1):
 
             try:
                 d['title'] = struct.find('a').text
-                d['rank'] = int(struct.find('span', {'class': 'lister-item-index unbold text-primary'}).text.replace('.',''))
-                d['genre'] = struct.find('span', {'class': 'genre'}).text.replace(' ','').replace('\n', '')
-                d['rating'] = struct.find('div', {'class': 'inline-block ratings-imdb-rating'})['data-value']
-                d['imdb_id'] = struct.find('span', {'class': 'userRatingValue'})['data-tconst']
+                d['rank'] = int(struct.find(
+                    'span', {'class': 'lister-item-index unbold text-primary'}).text.replace('.', ''))
+                d['genre'] = struct.find('span', {'class': 'genre'}).text.replace(
+                    ' ', '').replace('\n', '')
+                d['rating'] = struct.find(
+                    'div', {'class': 'inline-block ratings-imdb-rating'})['data-value']
+                d['imdb_id'] = struct.find('span', {'class': 'userRatingValue'})[
+                    'data-tconst']
 
             except TypeError:
                 pass
@@ -99,6 +104,7 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
     resp = simple_get(url, 'json', payload)
     return json.loads(resp)
 
+
 omdb_data = []
 
 for d in imdb_titles(3):
@@ -112,20 +118,3 @@ for d in imdb_titles(3):
         pass
 
 print(next(item for item in omdb_data if item['rank'] == 1))
-
-#with open('omdb_test.json', 'w') as outfile:
-#    json.dump(get_omdb_data(title='Game of Thrones'), outfile)
-
-#search_string = 'http://www.omdbapi.com/?apikey=' + get_api_key('omdb_api_key.txt')
-#
-#a = get_omdb_data(title='Game of Thrones')
-# print(a)
-
-#TEST_TITLES = ['The Office', 'Parks and Recreation', 'Game of Thrones']
-
-#RAW_DATA = []
-
-# for T in TEST_TITLES:
-#     RAW_DATA.append(get_omdb_data(title=T, plot='full'))
-#
-# DATA = df.DataFrame(RAW_DATA)
