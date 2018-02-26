@@ -122,4 +122,6 @@ for d in imdb_titles(3):
         print('OMDB retrieval failed for ' + d['title'])
         pass
 
-print(next(item for item in omdb_data if item['rank'] == 1))
+with open('../data/test_output.txt','w') as f:
+    for line in omdb_data:
+        f.write(str(line))
