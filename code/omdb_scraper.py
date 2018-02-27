@@ -29,18 +29,29 @@ def simple_get(url, expected='html', payload=None):
 
 
 def image_get(url, expected='image', payload=None, filename=str(uuid.uuid4())):
+    """
+    attempts to stream content at \\url\\ to image file
+    """
     try:
         with closing(get(url, stream=True, params=payload)) as resp:
             if is_good_response(resp, expected):
-                return_format = url[url.rfind('.')+1:]
+                ext_pos = url.rfind('.')
+                if ext_pos == -1:
+                    return_format = 'png'
+                else:
+                    return_format = url[url.rfind('.')+1:]
+
                 filepath = '../data/posters/' + filename + '.' + return_format
                 with open(filepath, 'wb') as out_file:
                     shutil.copyfileobj(resp.raw, out_file)
             return None
 
     except RequestException as err_msg:
-        print('Error during requests to {0} : {1}'.format(url, str(err_msg)))
-        return None
+        if url == 'N/A':
+            pass
+        else:
+            print('Error during requests to {0} : {1}'.format(url, str(err_msg)))
+            return None
 
 
 def is_good_response(resp, expected='html'):
@@ -168,4 +179,5 @@ with open('../data/test_output.txt', 'w') as f:
     for line in OMDB_DATA:
         f.write(str(line))
 
-image_get(url=OMDB_DATA[1]['Poster'], filename = OMDB_DATA[1]['imdbID'])
+for content in OMDB_DATA:
+    image_get(url=content['Poster'], filename=content['imdbID'])
