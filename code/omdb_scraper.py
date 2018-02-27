@@ -6,7 +6,7 @@ pandas for data analysis
 """
 from contextlib import closing
 import json
-import uuid
+from uuid import uuid4
 import shutil
 from requests import get
 from requests.exceptions import RequestException
@@ -28,7 +28,7 @@ def simple_get(url, expected='html', payload=None):
         return None
 
 
-def image_get(url, expected='image', payload=None, filename=str(uuid.uuid4())):
+def image_get(url, expected='image', payload=None, filename=str(uuid4())):
     """
     attempts to stream content at \\url\\ to image file
     """
@@ -161,7 +161,7 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
 
 OMDB_DATA = []
 
-for d in imdb_titles(1):
+for d in imdb_titles(1, content_type=['movies']):
     try:
         result = get_omdb_data(title=d['title'])
         result['rank'] = d['rank']
@@ -175,9 +175,9 @@ for d in imdb_titles(1):
         except KeyError:
             pass
 
-with open('../data/test_output.txt', 'w') as f:
-    for line in OMDB_DATA:
-        f.write(str(line))
+# with open('../data/test_output.txt', 'w') as f:
+#     for line in OMDB_DATA:
+#         f.write(str(line))
 
 for content in OMDB_DATA:
     image_get(url=content['Poster'], filename=content['imdbID'])
