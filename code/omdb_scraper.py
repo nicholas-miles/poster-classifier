@@ -2,12 +2,11 @@
 """
 URL and JSON tools for OMDB retrieval
 BeautifulSoup for web scraping
-pandas for data analysis
 """
 from contextlib import closing
 import json
 from uuid import uuid4
-import shutil
+from shutil import copyfileobj
 from requests import get
 from requests.exceptions import RequestException
 from bs4 import BeautifulSoup
@@ -37,13 +36,13 @@ def image_get(url, expected='image', payload=None, filename=str(uuid4())):
             if is_good_response(resp, expected):
                 ext_pos = url.rfind('.')
                 if ext_pos == -1:
-                    return_format = 'png'
+                    return_format = 'jpg'
                 else:
                     return_format = url[url.rfind('.')+1:]
 
                 filepath = '../data/posters/' + filename + '.' + return_format
                 with open(filepath, 'wb') as out_file:
-                    shutil.copyfileobj(resp.raw, out_file)
+                    copyfileobj(resp.raw, out_file)
             return None
 
     except RequestException as err_msg:
