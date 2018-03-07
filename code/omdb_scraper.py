@@ -160,7 +160,7 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
 
 OMDB_DATA = []
 
-for d in imdb_titles(1, content_type=['movies']):
+for d in imdb_titles(10, content_type=['movies']):
     try:
         result = get_omdb_data(title=d['title'])
         result['rank'] = d['rank']
