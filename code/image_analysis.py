@@ -1,47 +1,43 @@
+#pylint: disable=invalid-name,no-member
 import os
-import operator
 import random
-from sklearn import metrics
+from math import sqrt
+from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import numpy as np
-from math import sqrt
 import cv2
 from imutils import resize
+from omdb_scraper import get_omdb_data
 
 
-def random_image(filepath):
+def flatten_image(image_file):
+    return image_file.reshape((image_file.shape[0] * image_file.shape[1], 3))
+
+
+def all_images(filepath, resize_height=100):
+    images = []
+    for file in os.listdir(filepath):
+        imdb_id = file[:file.find('.')]
+        raw_image = cv2.cvtColor(cv2.imread(filepath + file), cv2.COLOR_BGR2RGB)
+        resized_image = resize(raw_image, height=resize_height)
+        flat_image = flatten_image(resized_image)
+        
+        image_dict = {'imdb_id': imdb_id, 'image': resized_image, 'flat_image': flat_image}
+
+        images.append(image_dict)
+
+    return images
+
+
+def random_image(filepath, resize_height=100):
     file = random.choice(os.listdir(filepath))
 
     raw_image = cv2.cvtColor(cv2.imread(filepath + file), cv2.COLOR_BGR2RGB)
-    resized_image = resize(raw_image, width=50)
+    resized_image = resize(raw_image, height=resize_height)
 
     return resized_image
-
-
-def main_colour(image_file, ignored_param=5, top_colours=1):
-    ignored_colours = []
-
-    for red in range(0, ignored_param + 1):
-        for green in range(0, ignored_param + 1):
-            for blue in range(0, ignored_param + 1):
-                ignored_colours.append((red, green, blue))
-
-    for red in range(255 - ignored_param, 256):
-        for green in range(255 - ignored_param, 256):
-            for blue in range(255 - ignored_param, 256):
-                ignored_colours.append((red, green, blue))
-
-    colour_dict = dict((y, x) for x, y in image_file.convert('RGB').getcolors())
-
-    for key in list(colour_dict):
-        if key in ignored_colours:
-            del colour_dict[key]
-
-
-    top_colour_list = list(sorted(colour_dict.items(), key=operator.itemgetter(1), reverse=True))
-
-    return [x for x, y in top_colour_list][:top_colours]
 
 
 def colour_distance(colour1, colour2):
@@ -50,12 +46,18 @@ def colour_distance(colour1, colour2):
     green = colour1[1] - colour2[1]
     blue = colour1[2] - colour2[2]
 
-    return sqrt(((2 + (red_mean / 256)) * red * red) + (4 * (green * green)) + ((2 + ((255 - red_mean)/256)) * blue * blue))
+    red_val = ((2 + (red_mean / 256)) * red * red)
+    green_val = (4 * (green * green))
+    blue_val = ((2 + ((255 - red_mean)/256)) * blue * blue)
+
+    total_val = sqrt(red_val + green_val + blue_val)
+
+    return total_val
 
 
 def centroid_histogram(clt):
     num_labels = np.arange(0, len(np.unique(clt.labels_)) + 1)
-    (hist, edges) = np.histogram(clt.labels_, bins = num_labels)
+    (hist, _) = np.histogram(clt.labels_, bins=num_labels)
 
     hist = hist.astype('float')
     hist /= hist.sum()
@@ -64,28 +66,39 @@ def centroid_histogram(clt):
 
 
 def plot_colors(hist, centroids):
-    bar = np.zeros((50,300,3), dtype = 'uint8')
+    bar_plot = np.zeros((50, 300, 3), dtype='uint8')
     startX = 0
 
     for (percent, color) in sorted(zip(hist, centroids), key=lambda x: -x[0]):
         endX = startX + (percent * 300)
-        cv2.rectangle(bar, (int(startX), 0), (int(endX), 50), color.astype('uint8').tolist(), -1)
+        start_coor = (int(startX), 0)
+        end_coor = (int(endX), 50)
+        cv2.rectangle(bar_plot, start_coor, end_coor, color.astype('uint8').tolist(), -1)
         startX = endX
 
-    return bar
+    return bar_plot
 
 
 def cluster_image(image_file, clusters=5):
-    image_arr = image_file.reshape((image_file.shape[0] * image_file.shape[1], 3))
+    image_arr = flatten_image(image_file)
 
-    clt = KMeans(n_clusters = clusters)
+    clt = KMeans(n_clusters=clusters)
     clt.fit(image_arr)
 
-    silhouettes = metrics.silhouette_score(image_arr, clt.labels_, metric='euclidean', sample_size=300)
+    silhouettes = silhouette_score(image_arr, clt.labels_, metric='euclidean', sample_size=300)
 
     return clt, silhouettes
 
+
 if __name__ == '__main__':
+    ALL_IMAGES = all_images('../data/posters/')
+    image = ALL_IMAGES[0]
+    image['genre'] = get_omdb_data(imdb_id = image['imdb_id'])['Genre']
+
+    print(image)
+
+    raise SystemExit
+
     SELECTED_IMAGE = random_image('../data/posters/')
 
     max_score = 0
@@ -93,14 +106,14 @@ if __name__ == '__main__':
     optimal_clt = None
 
     colour_bars = []
-    for cluster_size in range(2,17):
+    for cluster_size in range(2, 17):
         CLT, SILHOUETTE_SCORE = cluster_image(SELECTED_IMAGE, cluster_size)
         if SILHOUETTE_SCORE > max_score:
             max_score = SILHOUETTE_SCORE
             optimal_k = cluster_size
             optimal_clt = CLT
 
-        COLOUR_HISTOGRAM = centroid_histogram(CLT)    
+        COLOUR_HISTOGRAM = centroid_histogram(CLT)
         COLOUR_BAR = plot_colors(COLOUR_HISTOGRAM,
                                  CLT.cluster_centers_)
         colour_bars.append(COLOUR_BAR)
