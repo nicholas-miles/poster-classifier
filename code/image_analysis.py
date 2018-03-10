@@ -16,14 +16,14 @@ def flatten_image(image_file):
     return image_file.reshape((image_file.shape[0] * image_file.shape[1], 3))
 
 
-def all_images(filepath, resize_height=100, num_image=None):
+def all_images(filepath, resize_height=100, resize_width=None, num_image=None):
     images = []
     for file in os.listdir(filepath):
         image_file = cv2.imread(filepath + file)
         if image_file is not None:
             imdb_id = file[:file.find('.')]
             raw_image = cv2.cvtColor(image_file, cv2.COLOR_BGR2RGB)
-            resized_image = resize(raw_image, height=resize_height)
+            resized_image = resize(raw_image, height=resize_height, width=resize_width)
             flat_image = flatten_image(resized_image)
             
             image_dict = {'imdb_id': imdb_id, 'image': resized_image, 'flat_image': flat_image}
@@ -110,7 +110,7 @@ def image_pca(flat_image_list, components=100):
 
 if __name__ == '__main__':
     print('loading images...')
-    ALL_IMAGES = all_images('../data/posters/', 20, 100)
+    ALL_IMAGES = all_images('../data/posters/', 20, 15, 100)
     print('getting genre...')
     for image in ALL_IMAGES:
         image['genre'] = get_omdb_data(imdb_id = image['imdb_id'])['Genre']
