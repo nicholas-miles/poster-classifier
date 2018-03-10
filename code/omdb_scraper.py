@@ -157,26 +157,26 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
 
     return json_resp
 
+if __name__ == '__main__':
+    OMDB_DATA = []
 
-OMDB_DATA = []
-
-for d in imdb_titles(10, content_type=['movies']):
-    try:
-        result = get_omdb_data(title=d['title'])
-        result['rank'] = d['rank']
-        OMDB_DATA.append(result)
-    except KeyError:
+    for d in imdb_titles(10, content_type=['movies']):
         try:
-            result = get_omdb_data(imdb_id=d['imdb_id'])
+            result = get_omdb_data(title=d['title'])
             result['rank'] = d['rank']
             OMDB_DATA.append(result)
-
         except KeyError:
-            pass
+            try:
+                result = get_omdb_data(imdb_id=d['imdb_id'])
+                result['rank'] = d['rank']
+                OMDB_DATA.append(result)
 
-# with open('../data/test_output.txt', 'w') as f:
-#     for line in OMDB_DATA:
-#         f.write(str(line))
+            except KeyError:
+                pass
 
-for content in OMDB_DATA:
-    image_get(url=content['Poster'], filename=content['imdbID'])
+    # with open('../data/test_output.txt', 'w') as f:
+    #     for line in OMDB_DATA:
+    #         f.write(str(line))
+
+    for content in OMDB_DATA:
+        image_get(url=content['Poster'], filename=content['imdbID'])

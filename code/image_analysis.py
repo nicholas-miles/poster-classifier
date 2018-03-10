@@ -16,17 +16,22 @@ def flatten_image(image_file):
     return image_file.reshape((image_file.shape[0] * image_file.shape[1], 3))
 
 
-def all_images(filepath, resize_height=100):
+def all_images(filepath, resize_height=100, num_image=None):
     images = []
     for file in os.listdir(filepath):
-        imdb_id = file[:file.find('.')]
-        raw_image = cv2.cvtColor(cv2.imread(filepath + file), cv2.COLOR_BGR2RGB)
-        resized_image = resize(raw_image, height=resize_height)
-        flat_image = flatten_image(resized_image)
-        
-        image_dict = {'imdb_id': imdb_id, 'image': resized_image, 'flat_image': flat_image}
+        image_file = cv2.imread(filepath + file)
+        if image_file is not None:
+            imdb_id = file[:file.find('.')]
+            raw_image = cv2.cvtColor(image_file, cv2.COLOR_BGR2RGB)
+            resized_image = resize(raw_image, height=resize_height)
+            flat_image = flatten_image(resized_image)
+            
+            image_dict = {'imdb_id': imdb_id, 'image': resized_image, 'flat_image': flat_image}
 
-        images.append(image_dict)
+            images.append(image_dict)
+
+            if num_image is not None and num_image <= len(images):
+                break
 
     return images
 
@@ -34,10 +39,14 @@ def all_images(filepath, resize_height=100):
 def random_image(filepath, resize_height=100):
     file = random.choice(os.listdir(filepath))
 
+    imdb_id = file[:file.find('.')]
     raw_image = cv2.cvtColor(cv2.imread(filepath + file), cv2.COLOR_BGR2RGB)
     resized_image = resize(raw_image, height=resize_height)
+    flat_image = flatten_image(resized_image)
+    
+    image_dict = {'imdb_id': imdb_id, 'image': resized_image, 'flat_image': flat_image}
 
-    return resized_image
+    return image_dict
 
 
 def colour_distance(colour1, colour2):
@@ -80,23 +89,36 @@ def plot_colors(hist, centroids):
 
 
 def cluster_image(image_file, clusters=5):
-    image_arr = flatten_image(image_file)
-
     clt = KMeans(n_clusters=clusters)
-    clt.fit(image_arr)
+    clt.fit(image_file)
 
-    silhouettes = silhouette_score(image_arr, clt.labels_, metric='euclidean', sample_size=300)
+    silhouettes = silhouette_score(image_file, clt.labels_, metric='euclidean', sample_size=300)
 
     return clt, silhouettes
 
 
+def image_pca(flat_image_list, components=100):
+    pixel_list = [x.flatten() for x in flat_image_list]
+    image_array = np.vstack(pixel_list)
+    print(image_array.shape)
+    pca_obj = PCA(n_components = components)
+    pca_obj.fit(image_array)
+    print(pca_obj.explained_variance_ratio_)
+
+    return pca_obj.transform(image_array)
+
+
 if __name__ == '__main__':
-    ALL_IMAGES = all_images('../data/posters/')
-    image = ALL_IMAGES[0]
-    image['genre'] = get_omdb_data(imdb_id = image['imdb_id'])['Genre']
+    print('loading images...')
+    ALL_IMAGES = all_images('../data/posters/', 20, 100)
+    print('getting genre...')
+    for image in ALL_IMAGES:
+        image['genre'] = get_omdb_data(imdb_id = image['imdb_id'])['Genre']
 
-    print(image)
+    FLAT_IMAGES = [x['flat_image'] for x in ALL_IMAGES]
 
+    transform_images = image_pca(FLAT_IMAGES)
+    print(transform_images)
     raise SystemExit
 
     SELECTED_IMAGE = random_image('../data/posters/')
@@ -107,7 +129,7 @@ if __name__ == '__main__':
 
     colour_bars = []
     for cluster_size in range(2, 17):
-        CLT, SILHOUETTE_SCORE = cluster_image(SELECTED_IMAGE, cluster_size)
+        CLT, SILHOUETTE_SCORE = cluster_image(SELECTED_IMAGE['flat_image'], cluster_size)
         if SILHOUETTE_SCORE > max_score:
             max_score = SILHOUETTE_SCORE
             optimal_k = cluster_size
@@ -128,7 +150,7 @@ if __name__ == '__main__':
     COLOUR_BAR = plot_colors(COLOUR_HISTOGRAM, IMAGE_CLT.cluster_centers_)
 
     plt.figure()
-    plt.imshow(SELECTED_IMAGE)
+    plt.imshow(SELECTED_IMAGE['image'])
     plt.axis('off')
 
     plt.figure()
