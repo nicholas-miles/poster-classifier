@@ -98,23 +98,29 @@ def cluster_image(image_file, clusters=5):
     return clt, silhouettes
 
 
-def image_pca(flat_image_list, components=100):
+def image_pca(flat_image_list, components=100, comp_threshold=0.9):
     pixel_list = [x.flatten() for x in flat_image_list]
     image_array = np.vstack(pixel_list)
+
     pca_obj = PCA(n_components = components)
     pca_obj.fit(image_array)
-    # plt.plot(np.cumsum(pca_obj.explained_variance_ratio_))
-    # plt.xlabel('number of components')
-    # plt.ylabel('cumulative explained variance')
-    # plt.show()
 
-    return pca_obj, image_array
+    comp_variance_cum = np.cumsum(pca_obj.explained_variance_ratio_)
+
+    keep_components = [comp_variance_cum <= comp_threshold]
+
+    num_c = sum(sum(keep_components))
+
+    return num_c, pca_obj.components_[keep_components]
 
 
 if __name__ == '__main__':
 
+    IM_H_LIM = 100
+    IM_W_LIM = 75
+
     print('loading images...')
-    ALL_IMAGES = all_images('../data/posters/', 100, 75, 100)
+    ALL_IMAGES = all_images('../data/posters/', IM_H_LIM, IM_W_LIM, 100)
 
     # print('getting genre...')
     # for ix, image in enumerate(ALL_IMAGES):
@@ -123,12 +129,12 @@ if __name__ == '__main__':
     #     except TypeError:
     #         del ALL_IMAGES[ix]
 
-    print('flattening_images')
+    print('flattening images')
     FLAT_IMAGES = [x['flat_image'] for x in ALL_IMAGES]
 
-    pca, transform_images = image_pca(FLAT_IMAGES)
-    print(pca.components_.reshape(100,100,75,3))
+    num_c, components = image_pca(FLAT_IMAGES, 100)
 
+    eigen_vectors = components.reshape(num_c, IM_H_LIM, IM_W_LIM, 3)
 
 
     raise SystemExit
