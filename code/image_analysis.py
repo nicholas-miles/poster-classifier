@@ -1,6 +1,7 @@
 #pylint: disable=invalid-name,no-member
 import os
 import random
+import seaborn as sns
 import time
 from math import sqrt
 from sklearn.metrics import silhouette_score
@@ -98,23 +99,75 @@ def cluster_image(image_file, clusters=5):
     return clt, silhouettes
 
 
-def image_pca(flat_image_list, components=200, comp_threshold=0.9):
-    im_len, _ = flat_image_list[0].shape
-    norm_flat_images = np.asarray(flat_image_list) / 255.0
-    pixel_list = [x.flatten() for x in norm_flat_images]
-    image_array = np.vstack(pixel_list)
+def image_pca(images, components=200, comp_threshold=0.9):
+    """Image PCA compression.
 
-    print(image_array.shape)
-    print(image_array[0])
+    Thnk Taylor series approximation in the case of approxamating a polynomial
+    and we obtain say [a, b, c] for:
+    y = a*x^0 + b*x^1 + c*x^2
 
-    pca_obj = PCA(n_components = components)
-    pca_obj.fit(image_array)
+    by analogy for our problem we have some components with coefficients
+    [a, b, c] and matrices sorted by importance of eigen-values:
+    img = a*X_0 + b*X_1 + c*X_2
 
-    comp_variance_cum = np.cumsum(pca_obj.explained_variance_ratio_)
-    print(comp_variance_cum)
+    thus the approximate image is the inverse transform of PCA while the eigen
+    basis is to be reshaped for the eigen images, because they are used to
+    approximate the image there are no restrictions on values they take hold of
+    thus we split their visualization into 3 channels for R, G and B
+    """
 
-    return pca_obj.transform(image_array)
+    # reshape array of images into flattened representation
+    image_array = images.reshape(100, -1)
 
+    # perform PCA transform to compress images
+    pca = PCA(n_components=components)
+
+    # calculate coefficients
+    coefficients = pca.fit_transform(image_array)
+
+    # get the explained variance
+    comp_variance_cum = np.cumsum(pca.explained_variance_ratio_)
+
+    # get the eigen basis and reshape to see as eigen images
+    eigen_image = pca.components_.reshape(-1, *images.shape[1:])
+
+    # using the inverse transform (by analogy using the taylor approximation)
+    # reconstrute the images
+    projected = pca.inverse_transform(coefficients)\
+                   .reshape(*images.shape)\
+                   .astype(np.uint8)
+
+    # visualize the new images in a new basis
+    print_projected_images(projected)
+
+    # visualize the matrices/flattened arrays/eigen images that were used to
+    # construct the above images
+    print_eigen_images(eigen_image, top_n=10)
+
+    return projected
+
+
+def print_projected_images(projected):
+    fig = plt.figure()
+    for y in range(5):
+        for x in range(5):
+            idx = 5*y + x+ 1
+            ax1 = fig.add_subplot(5, 5, idx)
+            plt.imshow(projected[idx, :, :, :])
+            plt.xticks([])
+            plt.yticks([])
+    plt.show()
+
+
+def print_eigen_images(eigen_image, top_n=5):
+    fig = plt.figure()
+    for y in range(top_n):
+        for x in range(3):
+            ax1 = fig.add_subplot(3, top_n, top_n*x + y + 1)
+            sns.heatmap(eigen_image[y, :, :, x], cbar=False, cmap='jet')
+            plt.xticks([])
+            plt.yticks([])
+    plt.show()
 
 if __name__ == '__main__':
 
@@ -131,20 +184,16 @@ if __name__ == '__main__':
     #     except TypeError:
     #         del ALL_IMAGES[ix]
 
-    print('flattening images')
-    FLAT_IMAGES = [x['flat_image'] for x in ALL_IMAGES]
-
-    pca_images = image_pca(FLAT_IMAGES, 100)
-
-    print(pca_images)
-
-    for i in pca_images:
-        cv2.imshow(i.reshape(IM_H_LIM, IM_W_LIM, 3))
-
-    print(num_c)
-
-
+    images = np.array([x['image'] for x in ALL_IMAGES])
+    pca_images = image_pca(images, 30)
     raise SystemExit
+
+    # for i in pca_images:
+    #     cv2.imshow(i.reshape(IM_H_LIM, IM_W_LIM, 3))
+
+    # print(num_c)
+
+
 
     SELECTED_IMAGE = random_image('../data/posters/')
 
