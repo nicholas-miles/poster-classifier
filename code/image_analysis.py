@@ -1,6 +1,7 @@
 #pylint: disable=invalid-name,no-member
 import os
 import random
+import time
 from math import sqrt
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
@@ -16,14 +17,14 @@ def flatten_image(image_file):
     return image_file.reshape((image_file.shape[0] * image_file.shape[1], 3))
 
 
-def all_images(filepath, resize_height=100, resize_width=None, num_image=None):
+def all_images(filepath, resize_height=100, resize_width=50, num_image=None):
     images = []
     for file in os.listdir(filepath):
         image_file = cv2.imread(filepath + file)
         if image_file is not None:
             imdb_id = file[:file.find('.')]
             raw_image = cv2.cvtColor(image_file, cv2.COLOR_BGR2RGB)
-            resized_image = resize(raw_image, height=resize_height, width=resize_width)
+            resized_image = cv2.resize(raw_image, (resize_width, resize_height))
             flat_image = flatten_image(resized_image)
             
             image_dict = {'imdb_id': imdb_id, 'image': resized_image, 'flat_image': flat_image}
@@ -100,25 +101,36 @@ def cluster_image(image_file, clusters=5):
 def image_pca(flat_image_list, components=100):
     pixel_list = [x.flatten() for x in flat_image_list]
     image_array = np.vstack(pixel_list)
-    print(image_array.shape)
     pca_obj = PCA(n_components = components)
     pca_obj.fit(image_array)
-    print(pca_obj.explained_variance_ratio_)
+    # plt.plot(np.cumsum(pca_obj.explained_variance_ratio_))
+    # plt.xlabel('number of components')
+    # plt.ylabel('cumulative explained variance')
+    # plt.show()
 
-    return pca_obj.transform(image_array)
+    return pca_obj, image_array
 
 
 if __name__ == '__main__':
-    print('loading images...')
-    ALL_IMAGES = all_images('../data/posters/', 20, 15, 100)
-    print('getting genre...')
-    for image in ALL_IMAGES:
-        image['genre'] = get_omdb_data(imdb_id = image['imdb_id'])['Genre']
 
+    print('loading images...')
+    ALL_IMAGES = all_images('../data/posters/', 100, 75, 100)
+
+    # print('getting genre...')
+    # for ix, image in enumerate(ALL_IMAGES):
+    #     try:
+    #         image['genre'] = get_omdb_data(imdb_id = image['imdb_id'])['Genre']
+    #     except TypeError:
+    #         del ALL_IMAGES[ix]
+
+    print('flattening_images')
     FLAT_IMAGES = [x['flat_image'] for x in ALL_IMAGES]
 
-    transform_images = image_pca(FLAT_IMAGES)
-    print(transform_images)
+    pca, transform_images = image_pca(FLAT_IMAGES)
+    print(pca.components_.reshape(100,100,75,3))
+
+
+
     raise SystemExit
 
     SELECTED_IMAGE = random_image('../data/posters/')
@@ -136,8 +148,7 @@ if __name__ == '__main__':
             optimal_clt = CLT
 
         COLOUR_HISTOGRAM = centroid_histogram(CLT)
-        COLOUR_BAR = plot_colors(COLOUR_HISTOGRAM,
-                                 CLT.cluster_centers_)
+        COLOUR_BAR = plot_colors(COLOUR_HISTOGRAM, CLT.cluster_centers_)
         colour_bars.append(COLOUR_BAR)
 
     IMAGE_CLT = optimal_clt

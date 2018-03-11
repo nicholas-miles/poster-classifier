@@ -174,9 +174,5 @@ if __name__ == '__main__':
             except KeyError:
                 pass
 
-    # with open('../data/test_output.txt', 'w') as f:
-    #     for line in OMDB_DATA:
-    #         f.write(str(line))
-
     for content in OMDB_DATA:
         image_get(url=content['Poster'], filename=content['imdbID'])
