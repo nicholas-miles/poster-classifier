@@ -98,20 +98,22 @@ def cluster_image(image_file, clusters=5):
     return clt, silhouettes
 
 
-def image_pca(flat_image_list, components=100, comp_threshold=0.9):
-    pixel_list = [x.flatten() for x in flat_image_list]
+def image_pca(flat_image_list, components=200, comp_threshold=0.9):
+    im_len, _ = flat_image_list[0].shape
+    norm_flat_images = np.asarray(flat_image_list) / 255.0
+    pixel_list = [x.flatten() for x in norm_flat_images]
     image_array = np.vstack(pixel_list)
+
+    print(image_array.shape)
+    print(image_array[0])
 
     pca_obj = PCA(n_components = components)
     pca_obj.fit(image_array)
 
     comp_variance_cum = np.cumsum(pca_obj.explained_variance_ratio_)
+    print(comp_variance_cum)
 
-    keep_components = [comp_variance_cum <= comp_threshold]
-
-    num_c = sum(sum(keep_components))
-
-    return num_c, pca_obj.components_[keep_components]
+    return pca_obj.transform(image_array)
 
 
 if __name__ == '__main__':
@@ -132,9 +134,14 @@ if __name__ == '__main__':
     print('flattening images')
     FLAT_IMAGES = [x['flat_image'] for x in ALL_IMAGES]
 
-    num_c, components = image_pca(FLAT_IMAGES, 100)
+    pca_images = image_pca(FLAT_IMAGES, 100)
 
-    eigen_vectors = components.reshape(num_c, IM_H_LIM, IM_W_LIM, 3)
+    print(pca_images)
+
+    for i in pca_images:
+        cv2.imshow(i.reshape(IM_H_LIM, IM_W_LIM, 3))
+
+    print(num_c)
 
 
     raise SystemExit
