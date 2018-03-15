@@ -3,6 +3,7 @@ import os
 import random
 import seaborn as sns
 import time
+from tqdm import tqdm
 from math import sqrt
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
@@ -20,7 +21,7 @@ def flatten_image(image_file):
 
 def all_images(filepath, resize_height=100, resize_width=50, num_image=None):
     images = []
-    for file in os.listdir(filepath):
+    for file in tqdm(os.listdir(filepath)):
         image_file = cv2.imread(filepath + file)
         if image_file is not None:
             imdb_id = file[:file.find('.')]
@@ -38,12 +39,10 @@ def all_images(filepath, resize_height=100, resize_width=50, num_image=None):
     return images
 
 
-def random_image(filepath, resize_height=100):
-    file = random.choice(os.listdir(filepath))
-
+def image_dict(file, resize_height=100, resize_width=50):
     imdb_id = file[:file.find('.')]
-    raw_image = cv2.cvtColor(cv2.imread(filepath + file), cv2.COLOR_BGR2RGB)
-    resized_image = resize(raw_image, height=resize_height)
+    raw_image = cv2.cvtColor(cv2.imread(file), cv2.COLOR_BGR2RGB)
+    resized_image = cv2.resize(raw_image, (resize_width, resize_height))
     flat_image = flatten_image(resized_image)
     
     image_dict = {'imdb_id': imdb_id, 'image': resized_image, 'flat_image': flat_image}
@@ -117,7 +116,7 @@ def image_pca(images, components=200, comp_threshold=0.9):
     """
 
     # reshape array of images into flattened representation
-    image_array = images.reshape(100, -1)
+    image_array = images.reshape(len(images), -1)
 
     # perform PCA transform to compress images
     pca = PCA(n_components=components)
@@ -171,11 +170,11 @@ def print_eigen_images(eigen_image, top_n=5):
 
 if __name__ == '__main__':
 
-    IM_H_LIM = 100
-    IM_W_LIM = 75
+    IM_H_LIM = 50
+    IM_W_LIM = 30
 
     print('loading images...')
-    ALL_IMAGES = all_images('../data/posters/', IM_H_LIM, IM_W_LIM, 100)
+    ALL_IMAGES = all_images('../data/posters/', IM_H_LIM, IM_W_LIM)
 
     # print('getting genre...')
     # for ix, image in enumerate(ALL_IMAGES):
@@ -195,7 +194,7 @@ if __name__ == '__main__':
 
 
 
-    SELECTED_IMAGE = random_image('../data/posters/')
+    SELECTED_IMAGE = image_dict('../data/posters/')
 
     max_score = 0
     optimal_k = 0

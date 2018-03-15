@@ -27,6 +27,8 @@ def simple_get(url, expected='html', payload=None):
         return None
 
 
+
+
 def image_get(url, expected='image', payload=None, filename=str(uuid4())):
     """
     attempts to stream content at \\url\\ to image file
@@ -151,9 +153,11 @@ def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
         payload['i'] = imdb_id
 
     resp = simple_get(url, 'json', payload)
-    json_resp = json.loads(resp)
-
-    json_resp['Genre'] = json_resp['Genre'].replace(' ', '').split(',')
+    try:
+        json_resp = json.loads(resp)
+        json_resp['Genre'] = json_resp['Genre'].replace(' ', '').split(',')
+    except TypeError:
+        json_resp = {'Genre': 'NA'}
 
     return json_resp
 
