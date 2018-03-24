@@ -3,13 +3,36 @@
 URL and JSON tools for OMDB retrieval
 BeautifulSoup for web scraping
 """
-from contextlib import closing
+# file modification
 import json
 from uuid import uuid4
 from shutil import copyfileobj
+from contextlib import closing
+# analysis toolkits
+import pandas as pd
+import numpy as np
 from requests import get
 from requests.exceptions import RequestException
 from bs4 import BeautifulSoup
+from tqdm import tqdm
+
+
+def get_api_key(filepath):
+    """
+    Retrieve the current OMDB API key, returns a string
+    """
+    with open(filepath, 'r') as api_file:
+        return api_file.readline().replace('\n', '').replace('\r', '')
+
+
+def is_good_response(resp, expected='html'):
+    """
+    Returns true if the response is the expected format, false otherwise
+    """
+    content_type = resp.headers['Content-Type'].lower()
+    return (resp.status_code == 200 and
+            content_type is not None and
+            content_type.find(expected) > -1)
 
 
 def simple_get(url, expected='html', payload=None):
@@ -25,8 +48,6 @@ def simple_get(url, expected='html', payload=None):
     except RequestException as err_msg:
         print('Error during requests to {0} : {1}'.format(url, str(err_msg)))
         return None
-
-
 
 
 def image_get(url, expected='image', payload=None, filename=str(uuid4())):
@@ -45,6 +66,8 @@ def image_get(url, expected='image', payload=None, filename=str(uuid4())):
                 filepath = '../data/posters/' + filename + '.' + return_format
                 with open(filepath, 'wb') as out_file:
                     copyfileobj(resp.raw, out_file)
+
+                return filepath
             return None
 
     except RequestException as err_msg:
@@ -55,128 +78,64 @@ def image_get(url, expected='image', payload=None, filename=str(uuid4())):
             return None
 
 
-def is_good_response(resp, expected='html'):
+def imdb_titles(params):
     """
-    Returns true if the response is the expected format, false otherwise
+    Scrapes imdb IDs from top titles page
+    returns list of imdb IDs
     """
-    content_type = resp.headers['Content-Type'].lower()
-    return (resp.status_code == 200 and
-            content_type is not None and
-            content_type.find(expected) > -1)
+    html_result = simple_get(
+        'http://www.imdb.com/search/title', payload=params)
+
+    soup = BeautifulSoup(html_result, 'html.parser')
+
+    id_l = []
+
+    for struct in soup.findAll('h3', {'class': 'lister-item-header'}):
+        id_content = struct.find('a')['href']
+        res = id_content.split('/')[2]
+
+        id_l.append(res)
+
+    return id_l
 
 
-def get_api_key(filepath):
-    """
-    Retrieve the current OMDB API key, returns a string
-    """
-
-    with open(filepath, 'r') as api_file:
-        return api_file.readline().replace('\n', '').replace('\r', '')
-
-
-def imdb_titles(num_pages=1, content_type=['tv_series', 'mini_series'],
-                genre_detail=None):
-    """
-    Scrapes imdb titles and IDs from top titles page
-    returns list of dictionaries
-    """
-    titles = []
-
-    content_search = ','.join(content_type)
-
-    try:
-        genre_search = ','.join(genre_detail)
-
-    except TypeError:
-        genre_search = None
-
-    for i in range(1, num_pages+1):
-        search_param = {
-            'title_type': content_search,
-            'page': str(i),
-            'genres': genre_search
-        }
-
-        html_result = simple_get(
-            'http://www.imdb.com/search/title', payload=search_param)
-
-        soup = BeautifulSoup(html_result, 'html.parser')
-
-        for struct in soup.findAll('div', {'class': 'lister-item-content'}):
-            dict_builder = {}
-
-            try:
-                imdb_content = struct.find(
-                    'span', {'class': 'userRatingValue'})
-                dict_builder['imdb_id'] = imdb_content['data-tconst']
-
-                title_content = struct.find('a')
-                dict_builder['title'] = title_content.text
-
-                rank_content = struct.find('span', {
-                    'class': 'lister-item-index unbold text-primary'})
-                dict_builder['rank'] = int(rank_content.text.replace('.', ''))
-
-                genre_content = struct.find('span', {'class': 'genre'})
-                dict_builder['genre'] = genre_content.text.replace(
-                    ' ', '').replace('\n', '')
-
-                rating_content = struct.find('div', {
-                    'class': 'inline-block ratings-imdb-rating'})
-                dict_builder['rating'] = rating_content['data-value']
-
-            except TypeError:
-                pass
-
-            titles.append(dict_builder)
-
-    return titles
-
-
-def get_omdb_data(imdb_id=None, title=None, content_type=None, plot='short'):
+def get_omdb_data(imdb_id):
     """
     Retrieve data from OMDB given parameter set, returns a JSON file
     """
     url = 'http://www.omdbapi.com/'
     payload = {
-        'apikey': get_api_key('omdb_api_key.txt'),
-        'type': content_type,
-        'plot': plot
+        'apikey': get_api_key('../omdb_api_key.txt'),
+        'i': imdb_id,
+        'plot': 'short'
     }
 
-    if imdb_id is None:
-        if title is None:
-            raise ValueError('Either a title or imdb_id must be specified')
-        else:
-            payload['t'] = title.replace(' ', '+')
-    else:
-        payload['i'] = imdb_id
+    raw_json = simple_get(url, 'json', payload)
 
-    resp = simple_get(url, 'json', payload)
-    try:
-        json_resp = json.loads(resp)
-        json_resp['Genre'] = json_resp['Genre'].replace(' ', '').split(',')
-    except TypeError:
-        json_resp = {'Genre': 'NA'}
+    if raw_json is None:
+        return None
 
-    return json_resp
+    return json.loads(raw_json)
+
 
 if __name__ == '__main__':
+    CONTENT = 5000
+    TYPE = 'movies'
+    PICKLE_NAME = 'movie_data'
+
     OMDB_DATA = []
 
-    for d in imdb_titles(10, content_type=['movies']):
-        try:
-            result = get_omdb_data(title=d['title'])
-            result['rank'] = d['rank']
-            OMDB_DATA.append(result)
-        except KeyError:
-            try:
-                result = get_omdb_data(imdb_id=d['imdb_id'])
-                result['rank'] = d['rank']
-                OMDB_DATA.append(result)
+    for i in tqdm(range(1, CONTENT // 50 + 1)):
+        search_param = {'title_type': TYPE, 'page': str(i)}
 
-            except KeyError:
-                pass
+        for val in tqdm(imdb_titles(search_param)):
+            omdb = get_omdb_data(val)
+            if omdb is not None and omdb['Poster'] != 'nan':
+                OMDB_DATA.append(omdb)
 
-    for content in OMDB_DATA:
-        image_get(url=content['Poster'], filename=content['imdbID'])
+    df = pd.DataFrame(OMDB_DATA)[['imdbID', 'Poster', 'Genre']]
+    df['Genre'] = df.Genre.apply(lambda x: str(x).split(', '))
+    df['Filepath'] = np.vectorize(image_get)(url=df['Poster'], filename=df['imdbID'])
+
+    df.set_index('imdbID')
+    df.to_pickle('../data/out/{}.pkl'.format(PICKLE_NAME))
