@@ -190,9 +190,3 @@ if __name__ == '__main__':
     plt.axis('off')
     plt.imshow(cbars)
     plt.show()
-
-    # TOP_COLOUR_LIST = main_colour(SELECTED_IMAGE, top_colours=5)
-
-# for i in TOP_COLOUR_LIST:
-#     for j in TOP_COLOUR_LIST:
-#         print('Distance between {} and {} is {}'.format(i,j,colour_distance(i, j)))

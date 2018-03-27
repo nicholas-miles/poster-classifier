@@ -119,7 +119,7 @@ def get_omdb_data(imdb_id):
 
 
 if __name__ == '__main__':
-    CONTENT = 5000
+    CONTENT = 500
     TYPE = 'movies'
     PICKLE_NAME = 'movie_data'
 
@@ -130,10 +130,11 @@ if __name__ == '__main__':
 
         for val in tqdm(imdb_titles(search_param)):
             omdb = get_omdb_data(val)
-            if omdb is not None and omdb['Poster'] != 'nan':
+            if omdb is not None and 'Poster' in omdb and omdb['Poster'] != 'nan':
                 OMDB_DATA.append(omdb)
 
     df = pd.DataFrame(OMDB_DATA)[['imdbID', 'Poster', 'Genre']]
+    df.columns = ['imdb_id','filepath','genre']
     df['Genre'] = df.Genre.apply(lambda x: str(x).split(', '))
     df['Filepath'] = np.vectorize(image_get)(url=df['Poster'], filename=df['imdbID'])
 
