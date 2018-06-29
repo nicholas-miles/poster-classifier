@@ -9,7 +9,7 @@ from time import time
 
 
 class GenreEmbedding(object):
-    def test(self):
+    def test(self): 
         print("Loading Pickles")
         dfs = self.load_pickles()
 
